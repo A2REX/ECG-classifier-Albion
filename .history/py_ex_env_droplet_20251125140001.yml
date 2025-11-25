@@ -1,0 +1,12 @@
+name: py_ex
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pip:
+      - html5lib==1.1
+      - scikit-learn==1.3.2
+      - imutils==0.5.4
+      - Pillow==9.5.0
+      - tensorflow==2.13.0
+      

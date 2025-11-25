@@ -1,0 +1,12 @@
+name: py_ex
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pip:
+      - joblib==1.4.2
+      - 
+      - 
+      - 
+      - 
+      
