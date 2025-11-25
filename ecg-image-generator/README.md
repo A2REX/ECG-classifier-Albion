@@ -36,6 +36,10 @@ The process of scanning and digitizing ECG images is governed by some fundamenta
      ```bash
      python gen_ecg_images_from_data_batch.py -i <path_to_input_directory> -o <path_to_output_directory> --print_header
      ```
+
+     ```bash
+     python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\OneDrive\Skolstuff UU\Projekt\python-example-2025\input-ecg-data" -o "C:\Users\albio\OneDrive\Skolstuff UU\Projekt\python-example-2025\output-images" --print_header
+     ```
     
 - The `gen_ecg_images_from_data_batch.py` script produces the following outputs in each iteration:
     * **Synthetic ECG image:** Includes ECG signals from all leads, gridlines, and the name of each ECG lead.
