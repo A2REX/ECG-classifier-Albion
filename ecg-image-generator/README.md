@@ -38,7 +38,7 @@ The process of scanning and digitizing ECG images is governed by some fundamenta
      ```
 
      ```bash
-     python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\OneDrive\Skolstuff UU\Projekt\python-example-2025\input-ecg-data" -o "C:\Users\albio\OneDrive\Skolstuff UU\Projekt\python-example-2025\output-images" --print_header
+     python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\Desktop\New project\python-example-2025\input-ecg-data" -o "C:\Users\albio\Desktop\New project\python-example-2025\output-images" --print_header -r 50
      ```
     
 - The `gen_ecg_images_from_data_batch.py` script produces the following outputs in each iteration:
