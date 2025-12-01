@@ -16,7 +16,20 @@ sampling_rate=100
 
 # load and convert annotation data
 Y = pd.read_csv(path+'ptbxl_database.csv', index_col='ecg_id')
-Y.scp_codes = Y.scp_codes.apply(lambda x: ast.literal_eval(x))
+Y.scp_codes = Y.scp_codes.apply(lambda x: ast.literal_eval(x))# Path to the training CSV file
+path_to_csv_train = 'ptbxl_database.csv'
+
+# Load the CSV file into a DataFrame
+df_train_labels = pd.read_csv(path_to_csv_train)
+'''
+print("\nDistribution of AF (Atrial Fibrillation) labels:")
+display(df_train_labels['AF'].value_counts())
+'''
+print("\nDistribution of Sex:")
+display(df_train_labels['sex'].value_counts())
+
+print("\nDistribution of Age:")
+display(df_train_labels['age'].describe())
 
 # Load raw signal data
 #X = load_raw_data(Y, sampling_rate, path)
@@ -43,8 +56,6 @@ y_train = Y[(Y.strat_fold != test_fold)].diagnostic_superclass
 # Test
 #X_test = X[np.where(Y.strat_fold == test_fold)]
 y_test = Y[Y.strat_fold == test_fold].diagnostic_superclass
-
-print(y_test[63])
 
 X = np.linspace(1, Y.shape[0], Y.shape[0])
 x_test = []
