@@ -43,7 +43,7 @@ The process of scanning and digitizing ECG images is governed by some fundamenta
      ## python gen_ecg_images_from_data_batch.py -i ..\input-ecg-data -o ..\output-images --print_header -r 50 --max_num_images 1
 
      ```bash
-     python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\Desktop\New project\python-example-2025\input-ecg-data" -o "C:\Users\albio\Desktop\New project\python-example-2025\output-images" --print_header -r 50
+     python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\Desktop\New project\python-example-2025\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\records100" -o "C:\Users\albio\Desktop\New project\python-example-2025\output-images" -r 50
      ```
     
 - The `gen_ecg_images_from_data_batch.py` script produces the following outputs in each iteration:
