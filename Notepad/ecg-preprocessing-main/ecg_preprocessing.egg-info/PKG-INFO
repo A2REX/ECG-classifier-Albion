@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: ecg-preprocessing
+Version: 0.1
+Summary: Routines for reading
+Author: Antonio H. Ribeiro, Petrus Abreu
+Author-email: antonior92@gmail.com
+License-File: LICENSE
+Dynamic: author
+Dynamic: author-email
+Dynamic: license-file
+Dynamic: summary
