@@ -8,7 +8,15 @@ The process of scanning and digitizing ECG images is governed by some fundamenta
 ## Release History
 - January 2024, initial public release
 
+
+## (Fernando reminder) ----------Setup with venv-------------------------
+     How to activate (once installed)
+     run:
+     '''
+     & .\.venv\Scripts\Activate.ps1
+     '''
 ## Installation
+
 - Setup with Conda env: 
      ```
      conda env create -f environment_droplet.yml 
@@ -40,7 +48,8 @@ The process of scanning and digitizing ECG images is governed by some fundamenta
      ```bash
      python gen_ecg_images_from_data_batch.py -i <path_to_input_directory> -o <path_to_output_directory> --print_header
      ```
-     ## python gen_ecg_images_from_data_batch.py -i ..\input-ecg-data -o ..\output-images --print_header -r 50 --max_num_images 1
+     ## python gen_ecg_images_from_data_batch.py -i ..\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\records100 -o ..\output-images -r 30 --max_num_images 1
+     
 
      ```bash
      python gen_ecg_images_from_data_batch.py -i "C:\Users\albio\Desktop\New project\python-example-2025\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3\records100" -o "C:\Users\albio\Desktop\New project\python-example-2025\output-images" -r 30 --max_num_images 1000
