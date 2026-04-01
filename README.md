@@ -1,190 +1,128 @@
-# Python example code for the George B. Moody PhysioNet Challenge 2025
+# ECG Disease Classification: Signal vs. Image-Based Models
 
-## What's in this repository?
+Comparison of two deep learning approaches for multi-label ECG diagnosis on the [PTB-XL dataset](https://physionet.org/content/ptb-xl/1.0.3/), with knowledge distillation from the signal model to the image model.
 
-This repository contains a simple example that illustrates how to format a Python entry for the [George B. Moody PhysioNet Challenge 2025](https://physionetchallenges.org/2025/). If you are participating in the 2025 Challenge, then we recommend using this repository as a template for your entry. You can remove some of the code, reuse other code, and add new code to create your entry. You do not need to use the models, features, and/or libraries in this example for your entry. We encourage a diversity of approaches to the Challenges.
+**5 diagnostic classes:** NORM, MI (Myocardial Infarction), STTC (ST/T Change), CD (Conduction Disturbance), HYP (Hypertrophy)
 
-For this example, we implemented a random forest model with several simple features. (This simple example is **not** designed to perform well, so you should **not** use it as a baseline for your approach's performance.) You can try it by running the following commands on the Challenge training set. If you are using a relatively recent personal computer, then you should be able to run these commands from start to finish on a small subset (1000 records) of the training data in a few minutes or less.
+| Model | Macro AUROC | Macro Brier |
+|---|---|---|
+| Signal (ResNet-1D) | 0.928 | 0.085 |
+| Image + KD (ResNet-50) | 0.917 | 0.091 |
+| Image only (ResNet-50) | 0.900 | 0.099 |
 
-## How do I run these scripts?
+See `Project_in_ECG.pdf` for the full report.
 
-First, you can download and create data for these scripts by following the [instructions](https://github.com/physionetchallenges/python-example-2025?tab=readme-ov-file#how-do-i-create-data-for-these-scripts) in the following section.
+---
 
-Second, you can install the dependencies for these scripts by creating a Docker image (see below) or [virtual environment](https://docs.python.org/3/library/venv.html) and running
+## Repository Structure
 
-    pip install -r requirements.txt
+```
+ECG-classifier/
+├── Notepad/                    # Jupyter notebooks (run from here)
+│   ├── Signal based notepad.ipynb
+│   ├── Image based notepad.ipynb
+│   ├── preprocess.py           # Generates all H5 data files (run before notebooks)
+│   ├── NoteEnv.yml             # Conda environment
+│   ├── record_history/         # Training metrics (auto-created)
+│   └── ecg-preprocessing-main/ # Signal preprocessing tool
+├── ecg-image-generator/        # ECG image synthesis toolkit
+├── ptb-xl-a-large-.../         # PTB-XL dataset (download separately)
+├── output-images/              # Generated ECG PNG images (see Step 2)
+└── Project_in_ECG.pdf          # Project report
+```
 
-CREATE CONDA ENVIRONMENT (From Fer)
-    conda env create -f py_ex_env_droplet.yml 
-    conda activate py_ex
+Trained models are saved outside the project:
+```
+signal_MODEL/model_{iter}.pth   # Signal model checkpoints
+IMAGE_MODEL/model_{iter}.pth    # Image model checkpoints (with KD)
+IMAGE_MODEL/model_NoKD_{iter}.pth
+```
 
-You can train your model by running
+---
 
-    python train_model.py -d training_data -m model
+## Setup
 
-where
+Run the one-command setup (Windows, requires Anaconda):
+```bat
+setup.bat
+```
 
-- `training_data` (input; required) is a folder with the training data files, which must include the labels; and
-- `model` (output; required) is a folder for saving your model.
+This installs `nb_conda_kernels` in the base environment and creates the `NoteEnv` conda environment. After setup, launch JupyterLab from the base environment:
+```bat
+jupyter lab
+```
+Select the **NoteEnv** kernel inside JupyterLab.
 
-You can run your trained model by running
+---
 
-    python run_model.py -d holdout_data -m model -o holdout_outputs
+## Pipeline
 
-where
+Run the following steps in order. **Steps 3–5 are run from the `Notepad/` directory.**
 
-- `holdout_data` (input; required) is a folder with the holdout data files, which will not necessarily include the labels;
-- `model` (input; required) is a folder for loading your model; and
-- `holdout_outputs` (output; required) is a folder for saving your model outputs.
+### Step 1 — Download PTB-XL
 
-The [Challenge website](https://physionetchallenges.org/2025/#data) provides a training database with a description of the contents and structure of the data files.
+Download from https://physionet.org/content/ptb-xl/1.0.3/ and place at:
+```
+ECG-classifier/ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3/
+    ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3/
+        ptbxl_database.csv
+        scp_statements.csv
+        RECORDS_LowRes.txt
+        records100/
+        records500/
+```
 
-You can evaluate your model by pulling or downloading the [evaluation code](https://github.com/physionetchallenges/evaluation-2025) and running
+### Step 2 — Generate ECG images
 
-    python evaluate_model.py -d holdout_data -o holdout_outputs -s scores.csv
+```bash
+cd ECG-classifier/ecg-image-generator
+python gen_ecg_images_from_data_batch.py \
+    --input_file ../ptb-xl-a-large-.../ptb-xl-a-large-.../ \
+    --output_dir ../output-images/
+```
 
-where
+Images are named `{ecg_id}_*.png`.
 
-- `holdout_data`(input; required) is a folder with labels for the holdout data files, which must include the labels;
-- `holdout_outputs` (input; required) is a folder containing files with your model's outputs for the data; and
-- `scores.csv` (output; optional) is file with a collection of scores for your model.
+### Step 3 — Generate all H5 data files
 
-You can use the provided training set for the `training_data` and `holdout_data` files, but we will use different datasets for the validation and test sets, and we will not provide the labels to your code.
+Run once before the notebooks. From `Notepad/`:
+```bash
+python preprocess.py --dataset S   # small subset (2000 signal / 500 image)
+python preprocess.py --dataset L   # full dataset (~19k records)
+```
 
-## How do I create data for these scripts?
+This generates:
+- `signal_train_*.h5` / `signal_test_*.h5` — resampled ECG signals + labels
+- `train_*.h5` / `test_*.h5` — grayscale image arrays + labels
 
-You can use the scripts in this repository to convert the [CODE-15% dataset](https://zenodo.org/records/4916206), the [SaMi-Trop dataset](https://zenodo.org/records/4905618), and the [PTB-XL dataset](https://physionet.org/content/ptb-xl/) to [WFDB](https://wfdb.io/) format.
+Files that already exist are skipped automatically.
 
-Please see the [data](https://physionetchallenges.org/2025/#data) section of the website for more information about the Challenge data.
+### Step 4 — Run the Signal notebook
 
-#### CODE-15% dataset
+Open `Notepad/Signal based notepad.ipynb` and run all cells top to bottom.
 
-These instructions use `code15_input` as the path for the input data files and `code15_output` for the output data files, but you can replace them with the absolute or relative paths for the files on your machine.
+This will:
+1. Load H5 files generated in Step 3 (skipped if already done)
+2. Train the ResNet-1D signal model → saves `signal_model.pth` and `../../signal_MODEL/model_{iter}.pth`
+3. Evaluate on the test set
+4. **Append `signal_logits` to `train_*.h5`** (required for Step 5 KD training)
 
-1. Download and unzip one or more of the `exam_part` files and the `exams.csv` file in the [CODE-15% dataset](https://zenodo.org/records/4916206).
+### Step 5 — Run the Image notebook
 
-2. Download and unzip the Chagas labels, i.e., the [`code15_chagas_labels.csv`](https://physionetchallenges.org/2025/data/code15_chagas_labels.zip) file.
+Open `Notepad/Image based notepad.ipynb` and run all cells top to bottom.
 
-3. Convert the CODE-15% dataset to WFDB format, with the available demographics information and Chagas labels in the WFDB header file, by running
+This will:
+1. Load H5 files (skipped if already created by Step 3)
+2. Train ResNet-50 with knowledge distillation from the signal model
+3. Evaluate and compare against the signal baseline
 
-        python prepare_code15_data.py \
-            -i code15_input/exams_part0.hdf5 code15_input/exams_part1.hdf5 \
-            -d code15_input/exams.csv \
-            -l code15_input/code15_chagas_labels.csv \
-            -o code15_output/exams_part0 code15_output/exams_part1
+**To train without KD:** set `using_kd = False` in Cell 22 before running Cell 24 onward.
 
-Each `exam_part` file in the [CODE-15% dataset](https://zenodo.org/records/4916206) contains approximately 20,000 ECG recordings. You can include more or fewer of these files to increase or decrease the number of ECG recordings, respectively. You may want to start with fewer ECG recordings to debug your code.
+---
 
-#### SaMi-Trop dataset
+## Key Design Choices
 
-These instructions use `samitrop_input` as the path for the input data files and `samitrop_output` for the output data files, but you can replace them with the absolute or relative paths for the files on your machine.
-
-1. Download and unzip `exams.zip` file and the `exams.csv` file in the [SaMi-Trop dataset](https://zenodo.org/records/4905618).
-
-2. Convert the SaMi-Trop dataset to WFDB format, with the available demographics information and Chagas labels in the WFDB header file, by running
-
-        python prepare_samitrop_data.py \
-            -i samitrop_input/exams.hdf5 \
-            -d samitrop_input/exams.csv \
-            -o samitrop_output
-
-#### PTB-XL dataset
-
-These instructions use `ptbxl_input` as the path for the input data files and `ptbxl_output` for the output data files, but you can replace them with the absolute or relative paths for the files on your machine. We are using the `records500` folder, which has a 500Hz sampling frequency, but you can also try the `records100` folder, which has a 100Hz sampling frequency.
-
-1. Download and, if necessary, unzip the [PTB-XL dataset](https://physionet.org/content/ptb-xl/).
-
-2. Update the WFDB files with the available demographics information and Chagas labels by running
-
-        python prepare_ptbxl_data.py \
-            -i ptbxl_input/records500/ \
-            -d ptbxl_input/ptbxl_database.csv \
-            -o ptbxl_output
-
-## Which scripts I can edit?
-
-Please edit the following script to add your code:
-
-* `team_code.py` is a script with functions for training and running your trained model.
-
-Please do **not** edit the following scripts. We will use the unedited versions of these scripts when running your code:
-
-* `train_model.py` is a script for training your model.
-* `run_model.py` is a script for running your trained model.
-* `helper_code.py` is a script with helper functions that we used for our code. You are welcome to use them in your code.
-
-These scripts must remain in the root path of your repository, but you can put other scripts and other files elsewhere in your repository.
-
-## How do I train, save, load, and run my model?
-
-To train and save your model, please edit the `train_model` function in the `team_code.py` script. Please do not edit the input or output arguments of this function.
-
-To load and run your trained model, please edit the `load_model` and `run_model` functions in the `team_code.py` script. Please do not edit the input or output arguments of these functions.
-
-## How do I run these scripts in Docker?
-
-Docker and similar platforms allow you to containerize and package your code with specific dependencies so that your code can be reliably run in other computational environments.
-
-To increase the likelihood that we can run your code, please [install](https://docs.docker.com/get-docker/) Docker, build a Docker image from your code, and run it on the training data. To quickly check your code for bugs, you may want to run it on a small subset of the training data, such as 1000 records.
-
-If you have trouble running your code, then please try the follow steps to run the example code.
-
-1. Create a folder `example` in your home directory with several subfolders.
-
-        user@computer:~$ cd ~/
-        user@computer:~$ mkdir example
-        user@computer:~$ cd example
-        user@computer:~/example$ mkdir training_data holdout_data model holdout_outputs
-
-2. Download the training data from the [Challenge website](https://physionetchallenges.org/2025/#data). Put some of the training data in `training_data` and `holdout_data`. You can use some of the training data to check your code (and you should perform cross-validation on the training data to evaluate your algorithm).
-
-3. Download or clone this repository in your terminal.
-
-        user@computer:~/example$ git clone https://github.com/physionetchallenges/python-example-2025.git
-
-4. Build a Docker image and run the example code in your terminal.
-
-        user@computer:~/example$ ls
-        holdout_data  holdout_outputs  model  python-example-2025  training_data
-
-        user@computer:~/example$ cd python-example-2025/
-
-        user@computer:~/example/python-example-2025$ docker build -t image .
-
-        Sending build context to Docker daemon  [...]kB
-        [...]
-        Successfully tagged image:latest
-
-        user@computer:~/example/python-example-2025$ docker run -it -v ~/example/model:/challenge/model -v ~/example/holdout_data:/challenge/holdout_data -v ~/example/holdout_outputs:/challenge/holdout_outputs -v ~/example/training_data:/challenge/training_data image bash
-
-        root@[...]:/challenge# ls
-            Dockerfile             holdout_outputs        run_model.py
-            evaluate_model.py      LICENSE                training_data
-            helper_code.py         README.md      
-            holdout_data           requirements.txt
-
-        root@[...]:/challenge# python train_model.py -d training_data -m model -v
-
-        root@[...]:/challenge# python run_model.py -d holdout_data -m model -o holdout_outputs -v
-
-        root@[...]:/challenge# python evaluate_model.py -d holdout_data -o holdout_outputs
-        [...]
-
-        root@[...]:/challenge# exit
-        Exit
-
-## What else do I need?
-
-This repository does not include code for evaluating your entry. Please see the [evaluation code repository](https://github.com/physionetchallenges/evaluation-2025) for code and instructions for evaluating your entry using the Challenge scoring metric.
-
-## How do I learn more? How do I share more?
-
-Please see the [Challenge website](https://physionetchallenges.org/2025/) for more details. Please post questions and concerns on the [Challenge discussion forum](https://groups.google.com/forum/#!forum/physionet-challenges). Please do not make pull requests, which may share information about your approach.
-
-## Useful links
-
-* [Challenge website](https://physionetchallenges.org/2025/)
-* [MATLAB example code](https://github.com/physionetchallenges/matlab-example-2025)
-* [Evaluation code](https://github.com/physionetchallenges/evaluation-2025)
-* [Frequently asked questions (FAQ) for this year's Challenge](https://physionetchallenges.org/2025/faq/)
-* [Frequently asked questions (FAQ) about the Challenges in general](https://physionetchallenges.org/faq/)
+- **Knowledge distillation loss:** `alpha * BCE(logits, labels) + beta * T^2 * BCE(sigmoid(logits/T), sigmoid(signal_logits/T))`  with `alpha=1, beta=1, T=3`
+- **Image preprocessing:** grayscale, top 27.5% cropped (header), normalised to [0, 1]
+- **Signal preprocessing:** resampled to 400 Hz, zero-padded to 4096 samples, baseline removed
+- **Train/val/test split:** PTB-XL stratified fold 10 = test, 80/20 random split of folds 1-9 = train/val

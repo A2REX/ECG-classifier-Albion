@@ -2,7 +2,10 @@ name: NoteEnv
 channels:
   - defaults
 dependencies:
-  - python 
+  - python
+  - pip
+  - ipykernel
+  - jupyterlab
   - pip:
     - certifi
     - cffi
@@ -31,9 +34,12 @@ dependencies:
     - six
     - soundfile
     - sympy
+    - --extra-index-url https://download.pytorch.org/whl/cu128
     - torch
     - torchvision
+    - scikit-learn
     - tqdm
+    - ipywidgets
     - typing_extensions
     - tzdata
     - urllib3
