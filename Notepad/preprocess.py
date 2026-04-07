@@ -19,6 +19,15 @@ import glob
 import argparse
 import subprocess
 
+# Guard: ensure we're running inside the NoteEnv conda environment
+try:
+    import xmljson  # required by ecg-preprocessing-main
+except ModuleNotFoundError:
+    print("ERROR: 'xmljson' not found — this script must be run with the NoteEnv conda environment.")
+    print("  conda activate NoteEnv")
+    print("  python preprocess.py --dataset S")
+    sys.exit(1)
+
 import numpy as np
 import pandas as pd
 import h5py

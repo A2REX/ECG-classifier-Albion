@@ -86,8 +86,9 @@ Images are named `{ecg_id}_*.png`.
 
 ### Step 3 — Generate all H5 data files
 
-Run once before the notebooks. From `Notepad/`:
+Run once before the notebooks. Activate the conda environment first, then from `Notepad/`:
 ```bash
+conda activate NoteEnv
 python preprocess.py --dataset S   # small subset (2000 signal / 500 image)
 python preprocess.py --dataset L   # full dataset (~19k records)
 ```
