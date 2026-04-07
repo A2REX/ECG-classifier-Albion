@@ -21,6 +21,7 @@ ECG-classifier/
 ├── Notepad/                    # Jupyter notebooks (run from here)
 │   ├── Signal based notepad.ipynb
 │   ├── Image based notepad.ipynb
+│   ├── metrics.ipynb           # Training curves + report comparison plot
 │   ├── preprocess.py           # Generates all H5 data files (run before notebooks)
 │   ├── NoteEnv.yml             # Conda environment
 │   ├── record_history/         # Training metrics (auto-created)
@@ -117,6 +118,13 @@ This will:
 3. Evaluate and compare against the signal baseline
 
 **To train without KD:** set `using_kd = False` in Cell 22 before running Cell 24 onward.
+
+### Step 6 — View metrics
+
+Open `Notepad/metrics.ipynb` and run all cells.
+
+- **Cell 1** — Training curve for any image model run: set `iter` to the run number (0-indexed) and it reads `record_history/metrics.h5`
+- **Cell 2** — Reproduces the macro AUROC comparison plot from the report (signal vs image+KD vs image-only) using the original full-dataset training data
 
 ---
 
