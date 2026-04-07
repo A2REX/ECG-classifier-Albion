@@ -114,17 +114,31 @@ Open `Notepad/Image based notepad.ipynb` and run all cells top to bottom.
 
 This will:
 1. Load H5 files (skipped if already created by Step 3)
-2. Train ResNet-50 with knowledge distillation from the signal model
-3. Evaluate and compare against the signal baseline
-
-**To train without KD:** set `using_kd = False` in Cell 22 before running Cell 24 onward.
+2. Train ResNet-50 **with KD** (`iter_kd`), then immediately **without KD** (`iter_nokd`), back to back
+3. Save metrics for both runs to `record_history/metrics.h5`
+4. Evaluate and compare against the signal baseline
 
 ### Step 6 — View metrics
 
 Open `Notepad/metrics.ipynb` and run all cells.
 
-- **Cell 1** — Training curve for any image model run: set `iter` to the run number (0-indexed) and it reads `record_history/metrics.h5`
-- **Cell 2** — Reproduces the macro AUROC comparison plot from the report (signal vs image+KD vs image-only) using the original full-dataset training data
+- **Cell 1** — Training curve for any single image model run: set `iter` to match the run number
+- **Cell 2** — AUROC comparison plot across all three models, reading from the locally generated metrics files
+
+---
+
+## Re-running the pipeline
+
+Steps 1–3 are fully idempotent — files that already exist are skipped automatically.
+
+Training (Steps 4–5) always re-runs. To record results from a new run without overwriting previous ones, **change the iter values** in the parameter cell before running:
+
+- Signal notebook Cell 32: `iter`
+- Image notebook Cell 22: `iter_kd`, `iter_nokd`
+
+Metrics are saved per iter key in the H5 files. Re-running with the same iter will retrain the model but not overwrite the saved metrics — delete the H5 file (or specific keys) first if you want to replace them.
+
+After a new run, update the iter values in `metrics.ipynb` Cell 2 to point at the new results.
 
 ---
 
