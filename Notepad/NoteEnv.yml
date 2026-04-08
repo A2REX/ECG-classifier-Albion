@@ -45,4 +45,6 @@ dependencies:
     - urllib3
     - wfdb
     - xmljson
+    - opencv-python
+    - pytorch-grad-cam
     
