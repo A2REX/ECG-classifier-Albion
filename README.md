@@ -123,7 +123,7 @@ This will:
 
 Open `Notepad/metrics.ipynb` and run all cells.
 
-- **Cell 1** — Training curve for any single image model run: set `iter` to match the run number
+- **Cell 1** — Training curve viewer: set `model = "signal"` or `"image"` and `iter` to inspect any run
 - **Cell 2** — AUROC comparison plot across all three models, reading from the locally generated metrics files
 
 ---
@@ -134,8 +134,8 @@ Steps 1–3 are fully idempotent — files that already exist are skipped automa
 
 Training (Steps 4–5) always re-runs. To record results from a new run without overwriting previous ones, **change the iter values** in the parameter cell before running:
 
-- Signal notebook Cell 32: `iter`
-- Image notebook Cell 22: `iter_kd`, `iter_nokd`
+- Signal notebook Cell 2 (parameters): `iter`
+- Image notebook Cell 3 (parameters): `iter_kd`, `iter_nokd`
 
 Metrics are saved per iter key in the H5 files. Re-running with the same iter will retrain the model but not overwrite the saved metrics — delete the H5 file (or specific keys) first if you want to replace them.
 
