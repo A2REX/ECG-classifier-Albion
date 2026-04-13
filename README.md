@@ -23,20 +23,17 @@ ECG-classifier/
 │   ├── Image based notepad.ipynb
 │   ├── metrics.ipynb           # Training curves + report comparison plot
 │   ├── preprocess.py           # Generates all H5 data files (run before notebooks)
-│   ├── NoteEnv.yml             # Conda environment
+│   ├── ECGenv.yml              # Conda environment
+│   ├── data/                   # H5 data files (auto-created by preprocess.py)
+│   ├── csv/                    # Evaluation metric CSVs (auto-created)
+│   ├── gradcam/                # Grad-CAM output images (auto-created)
+│   ├── models/                 # Model checkpoints (auto-created)
 │   ├── record_history/         # Training metrics (auto-created)
 │   └── ecg-preprocessing-main/ # Signal preprocessing tool
 ├── ecg-image-generator/        # ECG image synthesis toolkit
-├── ptb-xl-a-large-.../         # PTB-XL dataset (download separately)
+├── ptb-xl-dataset/             # PTB-XL dataset (download separately, see Step 1)
 ├── output-images/              # Generated ECG PNG images (see Step 2)
 └── Project_in_ECG.pdf          # Project report
-```
-
-Trained models are saved outside the project:
-```
-signal_MODEL/model_{iter}.pth   # Signal model checkpoints
-IMAGE_MODEL/model_{iter}.pth    # Image model checkpoints (with KD)
-IMAGE_MODEL/model_NoKD_{iter}.pth
 ```
 
 ---
@@ -48,49 +45,61 @@ Run the one-command setup (Windows, requires Anaconda):
 setup.bat
 ```
 
-This installs `nb_conda_kernels` in the base environment and creates the `NoteEnv` conda environment. After setup, launch JupyterLab from the base environment:
+This installs `nb_conda_kernels` in the base environment and creates the `ECGenv` conda environment. After setup, launch JupyterLab from the base environment:
 ```bat
 jupyter lab
 ```
-Select the **NoteEnv** kernel inside JupyterLab.
+Select the **ECGenv** kernel inside JupyterLab.
 
 ---
 
 ## Pipeline
 
-Run the following steps in order. **Steps 3–5 are run from the `Notepad/` directory.**
+Run the following steps in order. **Steps 1–3 are run from the root directory in Anaconda Prompt.**
 
 ### Step 1 — Download PTB-XL
 
-Download from https://physionet.org/content/ptb-xl/1.0.3/ and place at:
+Download the dataset (~3 GB uncompressed) using one of the following methods, then place the files at `ECG-classifier/ptb-xl-dataset/`:
+
+**Option A — wget** (Linux/macOS/WSL):
+```bash
+wget -r -N -c -np --cut-dirs=4 --directory-prefix=ptb-xl-dataset https://physionet.org/files/ptb-xl/1.0.3/
 ```
-ECG-classifier/ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3/
-    ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3/
-        ptbxl_database.csv
-        scp_statements.csv
-        RECORDS_LowRes.txt
-        records100/
-        records500/
+
+**Option B — AWS CLI**:
+```bash
+aws s3 sync --no-sign-request s3://physionet-open/ptb-xl/1.0.3/ ptb-xl-dataset/
+```
+
+**Option C — ZIP**: Download the ZIP file (1.7 GB) from https://physionet.org/content/ptb-xl/1.0.3/, extract it, and rename/move the extracted folder to `ptb-xl-dataset/` inside the project root.
+
+The folder should contain:
+```
+ptb-xl-dataset/
+    ptbxl_database.csv
+    scp_statements.csv
+    RECORDS_LowRes.txt
+    records100/
+    records500/
 ```
 
 ### Step 2 — Generate ECG images
 
 ```bash
-cd ECG-classifier/ecg-image-generator
-python gen_ecg_images_from_data_batch.py \
-    --input_file ../ptb-xl-a-large-.../ptb-xl-a-large-.../ \
-    --output_dir ../output-images/
+conda activate ECGenv
+cd ecg-image-generator
+python gen_ecg_images_from_data_batch.py -i ../ptb-xl-dataset/records100 -o ../output-images/ -r 30
 ```
 
 Images are named `{ecg_id}_*.png`.
+The flag `-r 30` determines the resolution of images in DPI.
 
 ### Step 3 — Generate all H5 data files
 
-Run once before the notebooks. Activate the conda environment first, then from `Notepad/`:
 ```bash
-conda activate NoteEnv
+cd Notepad
 python preprocess.py --dataset S   # small subset (2000 signal / 500 image)
-python preprocess.py --dataset L   # full dataset (~19k records)
+python preprocess.py --dataset L   # full dataset (~22k records)
 ```
 
 This generates:
@@ -105,9 +114,11 @@ Open `Notepad/Signal based notepad.ipynb` and run all cells top to bottom.
 
 This will:
 1. Load H5 files generated in Step 3 (skipped if already done)
-2. Train the ResNet-1D signal model → saves `signal_model.pth` and `../../signal_MODEL/model_{iter}.pth`
+2. Train the ResNet-1D signal model → saves `models/signal_model_{iter}.pth`
 3. Evaluate on the test set
 4. **Append `signal_logits` to `train_*.h5`** (required for Step 5 KD training)
+
+Hyperparameters can be changed in cell 3 (defaults from report used).
 
 ### Step 5 — Run the Image notebook
 
@@ -118,6 +129,8 @@ This will:
 2. Train ResNet-50 **with KD** (`iter_kd`), then immediately **without KD** (`iter_nokd`), back to back
 3. Save metrics for both runs to `record_history/metrics.h5`
 4. Evaluate and compare against the signal baseline
+
+Hyperparameters can be changed in cell 3 (defaults from report used).
 
 ### Step 6 — View metrics
 
@@ -137,7 +150,7 @@ Training (Steps 4–5) always re-runs. To record results from a new run without 
 - Signal notebook Cell 2 (parameters): `iter`
 - Image notebook Cell 3 (parameters): `iter_kd`, `iter_nokd`
 
-Metrics are saved per iter key in the H5 files. Re-running with the same iter will retrain the model but not overwrite the saved metrics — delete the H5 file (or specific keys) first if you want to replace them.
+Re-running with the same iter will retrain the model and overwrite both the saved metrics and the `.pth` checkpoint for that iter.
 
 After a new run, update the iter values in `metrics.ipynb` Cell 2 to point at the new results.
 

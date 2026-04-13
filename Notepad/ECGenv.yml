@@ -1,0 +1,64 @@
+name: ECGenv
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - ipykernel
+  - jupyterlab
+  - pip:
+    - certifi
+    - cffi
+    - charset-normalizer
+    - colorama
+    - cycler
+    - ecg-plot
+    - filelock
+    - h5py
+    - idna
+    - Jinja2
+    - kiwisolver
+    - MarkupSafe
+    - matplotlib
+    - mpmath
+    - networkx
+    - "numpy<2.0"
+    - pandas
+    - Pillow
+    - pycparser
+    - pyparsing
+    - python-dateutil
+    - pytz
+    - requests
+    - scipy
+    - six
+    - soundfile
+    - sympy
+    - --extra-index-url https://download.pytorch.org/whl/cu128
+    - torch
+    - torchvision
+    - scikit-learn
+    - tqdm
+    - ipywidgets
+    - typing_extensions
+    - tzdata
+    - urllib3
+    - wfdb
+    - xmljson
+    - opencv-python
+    - grad-cam
+    - beautifulsoup4
+    - imageio
+    - imgaug
+    - imutils
+    - keras
+    - scikit-image
+    - seaborn
+    - spacy
+    - tensorflow
+    - validators
+    - html5lib
+    - joblib
+    - pyyaml
+    - qrcode
+    

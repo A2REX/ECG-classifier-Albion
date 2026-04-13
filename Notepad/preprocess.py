@@ -5,7 +5,7 @@ Run from the Notepad/ directory:
     python preprocess.py --dataset L   # full dataset (~19k records)
     python preprocess.py --dataset S   # small dataset (2000 signal / 500 image)
 
-Outputs (in Notepad/):
+Outputs (in Notepad/data/):
     signal_train_l.h5 / signal_train_s.h5
     signal_test_l.h5  / signal_test_s.h5
     train_l.h5        / train_s.h5
@@ -32,11 +32,11 @@ import numpy as np
 import pandas as pd
 import h5py
 from PIL import Image
+from tqdm import tqdm
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-PTB_PATH = (r'..\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3'
-            r'\ptb-xl-a-large-publicly-available-electrocardiography-dataset-1.0.3' + '\\')
+PTB_PATH = '../ptb-xl-dataset/'
 PNG_FOLDER = r'..\output-images' + '\\'
 CLASSES    = ['NORM', 'MI', 'STTC', 'CD', 'HYP']
 TEST_FOLD  = 10
@@ -82,31 +82,47 @@ def skip(path):
 def generate_signal_h5(dataset):
     print('\n=== Signal H5 generation ===')
 
+    os.makedirs('data', exist_ok=True)
+
     if dataset == 'S':
-        h5_test, h5_train   = 'signal_test_s.h5',  'signal_train_s.h5'
+        h5_test, h5_train   = 'data/signal_test_s.h5',  'data/signal_train_s.h5'
         txt_test, txt_train = 'Test_RECORDS_LowRes_s.txt', 'Train_RECORDS_LowRes_s.txt'
         data_size = 2000
     else:
-        h5_test, h5_train   = 'signal_test_l.h5',  'signal_train_l.h5'
+        h5_test, h5_train   = 'data/signal_test_l.h5',  'data/signal_train_l.h5'
         txt_test, txt_train = 'Test_RECORDS_LowRes.txt', 'Train_RECORDS_LowRes.txt'
         data_size = None  # all records
 
     Y = load_ptbxl_labels()
 
-    # Read full record list
-    with open(PTB_PATH + 'RECORDS_LowRes.txt', encoding='utf-8') as f:
+    # Read full record list (generate RECORDS_LowRes.txt from RECORDS if missing)
+    lowres_path = PTB_PATH + 'RECORDS_LowRes.txt'
+    if not os.path.exists(lowres_path):
+        print('  RECORDS_LowRes.txt not found — generating from RECORDS...')
+        with open(PTB_PATH + 'RECORDS', encoding='utf-8') as f:
+            all_records = [l.rstrip('\n') for l in f]
+        lowres = [r for r in all_records if r.endswith('_lr')]
+        with open(lowres_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lowres))
+        print(f'  Written: {lowres_path} ({len(lowres)} records)')
+    with open(lowres_path, encoding='utf-8') as f:
         lines = [l.rstrip('\n') for l in f]
 
-    # Split records and labels by fold
+    # Split records by fold (look up fold via ecg_id extracted from path)
     lines_test, lines_train = [], []
-    for i, line in enumerate(lines):
-        if Y.strat_fold.iloc[i] == TEST_FOLD:
+    for line in lines:
+        ecg_id = int(os.path.basename(line).split('_')[0])
+        if Y.loc[ecg_id, 'strat_fold'] == TEST_FOLD:
             lines_test.append(line)
         else:
             lines_train.append(line)
 
-    y_test  = to_binary(Y[Y.strat_fold == TEST_FOLD].diagnostic_superclass.tolist())
-    y_train = to_binary(Y[Y.strat_fold != TEST_FOLD].diagnostic_superclass.tolist())
+    def lines_to_labels(line_list):
+        ecg_ids = [int(os.path.basename(l).split('_')[0]) for l in line_list]
+        return to_binary(Y.loc[ecg_ids].diagnostic_superclass.tolist())
+
+    y_test  = lines_to_labels(lines_test)
+    y_train = lines_to_labels(lines_train)
 
     if data_size is not None:
         ratio           = len(y_test) / len(lines)
@@ -167,33 +183,54 @@ def generate_signal_h5(dataset):
 def generate_image_h5(dataset):
     print('\n=== Image H5 generation ===')
 
+    os.makedirs('data', exist_ok=True)
+
     if dataset == 'S':
-        h5_test, h5_train = 'test_s.h5', 'train_s.h5'
+        h5_test, h5_train = 'data/test_s.h5', 'data/train_s.h5'
         data_size = 500
     else:
-        h5_test, h5_train = 'test_l.h5', 'train_l.h5'
+        h5_test, h5_train = 'data/test_l.h5', 'data/train_l.h5'
         data_size = None  # all images
 
     if skip(h5_test) and skip(h5_train):
         return
 
     Y = load_ptbxl_labels()
+    y_test_series  = Y[Y.strat_fold == TEST_FOLD].diagnostic_superclass
+    y_train_series = Y[Y.strat_fold != TEST_FOLD].diagnostic_superclass
 
     png_paths = sorted(glob.glob(PNG_FOLDER + '*.png'))
     if not png_paths:
         print(f'ERROR: No PNG files found in {PNG_FOLDER}')
         sys.exit(1)
 
-    y_test_series  = Y[Y.strat_fold == TEST_FOLD].diagnostic_superclass
-    y_train_series = Y[Y.strat_fold != TEST_FOLD].diagnostic_superclass
+    # Build a lookup from ecg_id -> PNG path (first match per ECG)
+    png_by_id = {}
+    for p in png_paths:
+        eid = int(os.path.basename(p).split('_')[0])
+        if eid not in png_by_id:
+            png_by_id[eid] = p
 
-    png_test  = [p for p in png_paths
-                 if int(os.path.basename(p).split('_')[0]) in y_test_series.index]
-    png_train = [p for p in png_paths
-                 if int(os.path.basename(p).split('_')[0]) in y_train_series.index]
+    # Use the same ECG ID order as the signal txt files to guarantee alignment
+    if dataset == 'S':
+        sig_txt_test  = PTB_PATH + 'Test_RECORDS_LowRes_s.txt'
+        sig_txt_train = PTB_PATH + 'Train_RECORDS_LowRes_s.txt'
+    else:
+        sig_txt_test  = PTB_PATH + 'Test_RECORDS_LowRes.txt'
+        sig_txt_train = PTB_PATH + 'Train_RECORDS_LowRes.txt'
+
+    def ecg_ids_from_txt(txt_path):
+        with open(txt_path, encoding='utf-8') as f:
+            return [int(os.path.basename(l.rstrip('\n')).split('_')[0]) for l in f if l.strip()]
+
+    test_ecg_ids  = ecg_ids_from_txt(sig_txt_test)
+    train_ecg_ids = ecg_ids_from_txt(sig_txt_train)
+
+    png_test  = [png_by_id[eid] for eid in test_ecg_ids  if eid in png_by_id]
+    png_train = [png_by_id[eid] for eid in train_ecg_ids if eid in png_by_id]
 
     if data_size is not None:
-        ratio           = len(png_test) / len(png_paths)
+        ratio           = len(png_test) / (len(png_test) + len(png_train))
         data_size_test  = int(ratio * data_size)
         data_size_train = data_size - data_size_test
         png_test  = png_test[:data_size_test]
@@ -207,7 +244,7 @@ def generate_image_h5(dataset):
 
     def load_images(png_list):
         arrays = []
-        for p in png_list:
+        for p in tqdm(png_list, desc='Loading images'):
             img = Image.open(p).convert('L')
             arrays.append(np.array(img))
         arr = np.stack(arrays).astype(np.float32) / 255.0
